@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:camera/camera.dart';
 import 'dart:async';
-import 'package:socket_io_client/socket_io_client.dart' as io;
-
+import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart'; // Import this to use SystemChrome
-import 'socket_service.dart';
-import 'package:provider/provider.dart';
-
 
 
 late List<CameraDescription> _cameras;
@@ -28,21 +24,19 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
   late CameraController controller;
   bool isCameraInitialized = false;
   String serverResponse = '';
-  String serverResponseTrain = '';
-  String serverConnected = '' ; 
-  bool isCaptureFinished = false;
+  String serverResponseTrain = '' ; 
+  bool isCaptureFinished = false ; 
   var xAxis = 0;
   var yAxis = 0;
   late AnimationController _controller;
   late Animation<double> _animation;
-  late io.Socket socket;
 
   @override
   void initState() {
     super.initState();
-     _initializeSocket();
     _initializeCamera();
     _autoChangeCoordinates();
+    
 
     _controller = AnimationController(
       duration: const Duration(seconds: 2),
@@ -54,56 +48,37 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
         setState(() {});
       });
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
   }
 
-  void _initializeSocket() {
-  final socketService = Provider.of<SocketService>(context, listen: false);
-    if (socketService.socket.connected) {
-      setState(() {
-        serverConnected = 'Connected to server';
-      });
-    } else {
-      socketService.socket.on('connect', (_) {
-        if (mounted) {
-          setState(() {
-            serverConnected = 'Connected to server';
-          });
-        }
-      });
-    }
-  
-  socketService.socket.on('calibration_results', (data) {
-    setState(() {
-      serverResponse = data.toString();
-    });
-  });
-
-  socketService.socket.on('training_results', (data) {
-    setState(() {
-      serverResponseTrain = data.toString();
-    });
-  });
-
-  socketService.socket.on('error', (error) {
-    print('Error connecting to server: $error');
-  });
-
-  // Assign the socket from SocketService to the local socket variable
-  socket = socketService.socket;
-}
-
-
-  
   @override
   void dispose() {
     _controller.dispose();
     controller.dispose();
     super.dispose();
   }
-
-  void tellServerForTraining() {
-    socket.emit('train', {'isStart': 'Yes'});
+  void tellServerForTraining() async {
+    final uri = Uri.parse('http://10.240.0.166:5000/train') ; 
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'isStart': 'Yes'}),
+    );
+    if(response.statusCode == 200){
+      if(mounted){
+        setState(() {
+           serverResponseTrain = response.body.toString() ; 
+        });
+       
+      }
+    }
+    else{
+      if(mounted){
+        setState(() {
+        serverResponseTrain = response.body ; 
+      });
+      }
+    }
+    
   }
 
   void _nextCoordinates() {
@@ -163,7 +138,7 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
   }
 
   void _autoChangeCoordinates() {
-     Timer.periodic(Duration(seconds: 10), (timer) {
+    Timer.periodic(Duration(seconds: 10), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -186,7 +161,7 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
   }
 
   void _startAutoCaptureAndSend() {
-    Timer.periodic(Duration(milliseconds: 50), (timer) {
+    Timer.periodic(Duration(milliseconds: 10), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -199,17 +174,17 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
     });
   }
 
-
+  
+ 
   List<Uint8List> frameBuffer = [];
-  final int bufferSize = 4;
-  List<int> buttonNumbers = [];
+  final int bufferSize = 10;
+  List<int>buttonNumbers = [] ; 
 
   void _captureAndSendFrames() async {
-     try {
-      XFile? imageFile = await controller.takePicture();
+    try {
+      XFile imageFile = await controller.takePicture();
       if (imageFile != null) {
         Uint8List imageData = await imageFile.readAsBytes();
-        // Uint8List compressedImageData = _compressImage(imageData);
         frameBuffer.add(imageData);
         buttonNumbers.add(3 * xAxis + yAxis ); 
         if (frameBuffer.length >= bufferSize) {
@@ -221,13 +196,57 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
     } catch (e) {
       print('Error in capturing frames: $e');
     }
+  }
 
-  }
-    
-  void _sendFramesToServer(List<Uint8List> images, List<int> buttonNumbers) {
+  void _sendFramesToServer(List<Uint8List> images, List<int>buttonNumbers) async {
     List<String> base64Images = images.map((imgData) => base64Encode(imgData)).toList();
-    socket.emit('calibrate', {'images': base64Images, 'buttonNos': buttonNumbers});
+    final uri = Uri.parse('http://10.240.0.166:5000/calibrate');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'images': base64Images, 'buttonNos': buttonNumbers }),
+    );
+    if (response.statusCode == 200) {
+      final responseBody = jsonDecode(response.body);
+      if (mounted) {
+        setState(() {
+          serverResponse = responseBody.toString();
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          serverResponse = 'Error: ${response.reasonPhrase}';
+        });
+      }
+    }
   }
+
+  /*
+  void _sendFrameToServer(Uint8List imageData) async {
+    String base64Image = base64Encode(imageData);
+    final uri = Uri.parse('http://10.240.0.166:5000/calibrate');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'image': base64Image, 'buttonNo': 3 * xAxis + yAxis }),
+    );
+    if (response.statusCode == 200) {
+      final responseBody = jsonDecode(response.body);
+      if (mounted) {
+        setState(() {
+          serverResponse = responseBody.toString();
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          serverResponse = 'Error: ${response.reasonPhrase}';
+        });
+      }
+    }
+  }*/
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -554,14 +573,11 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
             if(serverResponseTrain != '')...[
               Text(serverResponseTrain) 
             ]
-    
-            else if (serverResponse != '') ... [
-              Text(serverResponse) 
-            ]
           ]
           
           ],
          
+
         ),
       ),
     );

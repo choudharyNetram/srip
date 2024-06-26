@@ -1,15 +1,13 @@
-
 import 'package:flutter/material.dart';
+import 'one_image.dart';
+import 'predictions.dart';
 import 'keyboard.dart';
-import 'ws_one_image.dart';
-import 'ws_predictions.dart';
-import 'keyboard1.dart';
 import 'socket_service.dart';
-import 'ws_calibration_button.dart';
+import 'calibration_start.dart';
 import 'package:provider/provider.dart';
 import 'socket_page.dart' ; 
-import 'ws_camera_keyboard1.dart'; 
-import 'ws_camera_stream.dart' ; 
+import 'camera_keyboard.dart'; 
+import 'camera_key_stream.dart' ; 
 
 
 class HomePage extends StatelessWidget {
@@ -76,15 +74,6 @@ class HomePage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => Keyboard()),
-                );
-              },
-              child: Text('Keyboard UI'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
                   MaterialPageRoute(builder: (context) => SingleImage(title: 'this is title')),
                 );
               },
@@ -97,10 +86,9 @@ class HomePage extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => CameraExample(title: 'this is title')),
                 );
               },
-              child: Text('Camera Stream & predictions'),
+              child: Text('Camera & predictions'),
             ),
             ElevatedButton(
-              
               onPressed: () {
                 socketService.socket.emit('prediction_ops_start') ; 
                 Navigator.push(
@@ -128,7 +116,7 @@ class HomePage extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => KeyboardNew1()),
                 );
               },
-              child: Text('New-Keyboard'),
+              child: Text('Keyboard'),
             ),
             ElevatedButton(
               onPressed: () {

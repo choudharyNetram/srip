@@ -17,14 +17,14 @@ Future<void> initializeCameras() async {
   _cameras = await availableCameras();
 }
 
-class CalibrationWindow extends StatefulWidget {
-  const CalibrationWindow({Key? key}) : super(key: key);
+class CalibrationWindowStream extends StatefulWidget {
+  const CalibrationWindowStream({Key? key}) : super(key: key);
 
   @override
-  State<CalibrationWindow> createState() => _CalibrationWindowState();
+  State<CalibrationWindowStream> createState() => _CalibrationWindowState();
 }
 
-class _CalibrationWindowState extends State<CalibrationWindow> with SingleTickerProviderStateMixin {
+class _CalibrationWindowState extends State<CalibrationWindowStream> with SingleTickerProviderStateMixin {
   late CameraController controller;
   bool isCameraInitialized = false;
   String serverResponse = '';
@@ -40,10 +40,8 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
   @override
   void initState() {
     super.initState();
-     _initializeSocket();
-    _initializeCamera();
     _autoChangeCoordinates();
-
+    _initializeSocketAndCamera();
     _controller = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -57,8 +55,22 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
 
   }
 
-  void _initializeSocket() {
-  final socketService = Provider.of<SocketService>(context, listen: false);
+  Future<void> _initializeSocketAndCamera() async {
+    await initializeCameras();
+    if (_cameras.isNotEmpty) {
+      controller = CameraController(_cameras[1], ResolutionPreset.max);
+      await controller.initialize();
+      if (!mounted) return;
+
+      setState(() {
+        isCameraInitialized = true;
+      });
+
+      // Start the image stream
+      controller.startImageStream(_processCameraImage);
+    }
+
+    final socketService = Provider.of<SocketService>(context, listen: false);
     if (socketService.socket.connected) {
       setState(() {
         serverConnected = 'Connected to server';
@@ -72,35 +84,81 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
         }
       });
     }
-  
-  socketService.socket.on('calibration_results', (data) {
+    socketService.socket.on('calibration_results', (data) {
     setState(() {
       serverResponse = data.toString();
     });
   });
 
-  socketService.socket.on('training_results', (data) {
-    setState(() {
-      serverResponseTrain = data.toString();
+    socketService.socket.on('training_results', (data) {
+      setState(() {
+        serverResponseTrain = data.toString();
+      });
     });
-  });
 
-  socketService.socket.on('error', (error) {
-    print('Error connecting to server: $error');
-  });
+    socketService.socket.on('error', (error) {
+      print('Error connecting to server: $error');
+    });
 
-  // Assign the socket from SocketService to the local socket variable
-  socket = socketService.socket;
-}
+    // Assign the socket from SocketService to the local socket variable
+    socket = socketService.socket;
+  }
 
-
-  
   @override
   void dispose() {
     _controller.dispose();
     controller.dispose();
     super.dispose();
   }
+
+  List<Uint8List> frameBuffer = [];
+  final int bufferSize = 5;
+  List<int> buttonNumbers = [];
+  int _lastProcessedTimestamp = 0;
+  final int _imageProcessingInterval = 200; // Interval in milliseconds
+
+
+  void _processCameraImage(CameraImage image) async {
+    int currentTimestamp = DateTime.now().millisecondsSinceEpoch;
+    if (currentTimestamp - _lastProcessedTimestamp < _imageProcessingInterval) {
+      return;
+    }
+    _lastProcessedTimestamp = currentTimestamp;
+    Uint8List yuvBytes = _concatenatePlanes(image.planes);
+    final int halfSize = yuvBytes.length ~/ 2; 
+    yuvBytes = yuvBytes.sublist(0, halfSize); 
+    frameBuffer.add(yuvBytes);
+    buttonNumbers.add(3 * xAxis + yAxis ); 
+    // print('Image Height: ${image.height}');
+    // print('Image Width: ${image.width}');
+    // print('Image Format: ${image.format.group}');
+    // print('Number of Planes: ${image.planes.length}');
+    if (frameBuffer.length >= bufferSize) {
+      /// print('Sending ${frameBuffer.length} images to server');
+      _sendImageToServer(frameBuffer, buttonNumbers);
+      frameBuffer.clear();
+      buttonNumbers.clear() ; 
+    }
+  }
+
+  Uint8List _concatenatePlanes(List<Plane> planes) {
+    final WriteBuffer allBytes = WriteBuffer();
+    for (Plane plane in planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    return allBytes.done().buffer.asUint8List();
+  }
+
+  void _sendImageToServer(List<Uint8List> imagesData, List<int> buttonNumbers) async {
+    try {
+      List<String> base64Images = imagesData.map((imgData) => base64Encode(imgData)).toList();
+      final socketService = Provider.of<SocketService>(context, listen: false);
+      socketService.socket.emit('calibrate_stream', {'images': base64Images, 'buttonNos': buttonNumbers});
+    } catch (e) {
+      print('Error sending images to server: $e');
+    }
+  }
+  
 
   void tellServerForTraining() {
     socket.emit('train', {'isStart': 'Yes'});
@@ -163,7 +221,7 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
   }
 
   void _autoChangeCoordinates() {
-     Timer.periodic(Duration(seconds: 5), (timer) {
+     Timer.periodic(Duration(seconds: 10), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -172,62 +230,7 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
     });
   }
 
-  Future<void> _initializeCamera() async {
-    await initializeCameras();
-    if (_cameras.isNotEmpty) {
-      controller = CameraController(_cameras[1], ResolutionPreset.medium);
-      await controller.initialize();
-      if (!mounted) return;
-      setState(() {
-        isCameraInitialized = true;
-      });
-      _startAutoCaptureAndSend();
-    }
-  }
-
-  void _startAutoCaptureAndSend() {
-    Timer.periodic(Duration(milliseconds: 50), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if(isCaptureFinished == true){
-        timer.cancel() ; 
-        return ; 
-      }
-      _captureAndSendFrames();
-    });
-  }
-
-
-  List<Uint8List> frameBuffer = [];
-  final int bufferSize = 4;
-  List<int> buttonNumbers = [];
-
-  void _captureAndSendFrames() async {
-     try {
-      XFile? imageFile = await controller.takePicture();
-      if (imageFile != null) {
-        Uint8List imageData = await imageFile.readAsBytes();
-        // Uint8List compressedImageData = _compressImage(imageData);
-        frameBuffer.add(imageData);
-        buttonNumbers.add(3 * xAxis + yAxis ); 
-        if (frameBuffer.length >= bufferSize) {
-          _sendFramesToServer(frameBuffer,buttonNumbers );
-          frameBuffer.clear();
-          buttonNumbers.clear() ; 
-        }
-      }
-    } catch (e) {
-      print('Error in capturing frames: $e');
-    }
-
-  }
-    
-  void _sendFramesToServer(List<Uint8List> images, List<int> buttonNumbers) {
-    List<String> base64Images = images.map((imgData) => base64Encode(imgData)).toList();
-    socket.emit('calibrate', {'images': base64Images, 'buttonNos': buttonNumbers});
-  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
