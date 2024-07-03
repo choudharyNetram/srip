@@ -43,7 +43,7 @@ class _CalibrationWindowState extends State<CalibrationWindowStream> with Single
     _autoChangeCoordinates();
     _initializeSocketAndCamera();
     _controller = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat(reverse: true);
 
@@ -58,7 +58,7 @@ class _CalibrationWindowState extends State<CalibrationWindowStream> with Single
   Future<void> _initializeSocketAndCamera() async {
     await initializeCameras();
     if (_cameras.isNotEmpty) {
-      controller = CameraController(_cameras[1], ResolutionPreset.max);
+      controller = CameraController(_cameras[1], ResolutionPreset.medium);
       await controller.initialize();
       if (!mounted) return;
 
@@ -89,7 +89,7 @@ class _CalibrationWindowState extends State<CalibrationWindowStream> with Single
       serverResponse = data.toString();
     });
   });
-
+/// training_results
     socketService.socket.on('training_results', (data) {
       setState(() {
         serverResponseTrain = data.toString();
@@ -115,7 +115,7 @@ class _CalibrationWindowState extends State<CalibrationWindowStream> with Single
   final int bufferSize = 5;
   List<int> buttonNumbers = [];
   int _lastProcessedTimestamp = 0;
-  final int _imageProcessingInterval = 200; // Interval in milliseconds
+  final int _imageProcessingInterval = 500; // Interval in milliseconds
 
 
   void _processCameraImage(CameraImage image) async {
@@ -221,7 +221,7 @@ class _CalibrationWindowState extends State<CalibrationWindowStream> with Single
   }
 
   void _autoChangeCoordinates() {
-     Timer.periodic(Duration(seconds: 10), (timer) {
+     Timer.periodic(Duration(seconds: 8), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -555,7 +555,8 @@ class _CalibrationWindowState extends State<CalibrationWindowStream> with Single
               child: Text('Start the training'),
             ),
             if(serverResponseTrain != '')...[
-              Text(serverResponseTrain) 
+              Text(serverResponseTrain) ,
+              Text(serverResponse) 
             ]
     
             else if (serverResponse != '') ... [

@@ -22,7 +22,7 @@ import eventlet
 
 app = Flask(__name__)
 #socketio = SocketIO(app, async_mode='eventlet')
-socketio = SocketIO(app, max_http_buffer_size=100 * 1024 * 1024)  # 100 MB
+socketio = SocketIO(app, max_http_buffer_size=100 * 1024 * 1024, async_mode='eventlet')  # 100 MB
 
 
 
@@ -257,7 +257,7 @@ def calibrate_stream(data):
         base64_image = base64_images[i]
 
         yuv_bytes = base64.b64decode(base64_image)
-        width, height = 960, 720  # Adjust based on your actual image resolution
+        width, height = 720, 480  # Adjust based on your actual image resolution (960, 720 for max)
         gray = np.frombuffer(yuv_bytes, dtype=np.uint8).reshape((height , width))
         gray = cv2.rotate(gray, cv2.ROTATE_180)
         gray = np.array(gray)
@@ -315,7 +315,7 @@ def calibrate_stream(data):
                     user_data['quadrant'].append(buttNo)
                     #print(user_data['quadrant'])
     
-    emit('calibration_results', {'results': "toke data for calibration "})
+    #emit('calibration_results', {'results': "toke data for calibration "})
 
 
 
@@ -387,7 +387,7 @@ def train(data):
     model.set_weights(save_best_model.best_weights)
 
     # Predict and evaluate the model
-    y_pred = model.predict(x_test)
+    y_pred = model.predict(x_test,verbose=0)
     y_pred_labels = np.argmax(y_pred, axis=1)
     cm = confusion_matrix(np.argmax(y_test, axis=1), y_pred_labels)
     print(cm)
@@ -499,6 +499,7 @@ def prediction_start():
 #     crop_height = int(height * 0.27)
 #     cropped_image = image[crop_height:, :]
 #     return cropped_image
+"""
 
 def process_image(image_base64, index, total_time):
     yuv_bytes = base64.b64decode(image_base64)
@@ -514,11 +515,16 @@ def process_image(image_base64, index, total_time):
         face_roi = rotated_image[y:y+h, x:x+w]
         eyes = eye_cascade.detectMultiScale(face_roi)
         for (ex, ey, ew, eh) in eyes:
+            
+            if ew <= 0 or eh <= 0:
+                continue  # Skip invalid eye regions
             eye_roi = face_roi[ey:ey+eh, ex:ex+ew]
+            if eye_roi.size == 0:
+                continue 
             eye_roi = cv2.resize(eye_roi, (100, 100), interpolation=cv2.INTER_LINEAR)
             image_shape = np.expand_dims(eye_roi, axis=-1).shape
             data = np.asarray([eye_roi.reshape(image_shape)]) / 255
-            predictions = model.predict(data)
+            predictions = model.predict(data )# verbose= 0 
             result = np.argmax(predictions[0])
             if ex < w/2:
                 eye1 = result
@@ -562,30 +568,22 @@ def predict_ops_stream(data):
 @socketio.on('predict_ops_stream')
 def predict_ops_stream(data):
     images = data['images']
+    images = images 
     weights = np.zeros(9)
     i = 0 
-    total_time=10
+    total_time=5
     prev=None
-    
-    weights[0] = random.randint(0, 8)
-
-    print(weights[0])
-    weights_list = weights.tolist()
-    emit('predict_weights', {
-        "weights": weights_list,
-    })
-    return 
-     
+   
 
     for image_base64 in images:
         yuv_bytes = base64.b64decode(image_base64)
         
-        width, height = 960, 720  # Adjust based on your actual image resolution
-        yuv_image = np.frombuffer(yuv_bytes, dtype=np.uint8).reshape((height , width))
+        width, height = 720, 480  # Adjust based on your actual image resolution
+        gray = np.frombuffer(yuv_bytes, dtype=np.uint8).reshape((height , width))
         #rgb_image = yuv_to_rgb(yuv_bytes, width, height)
         # Process the RGB image as needed
         #rgb_image = rgb_image.rotate(90, expand=True)
-        rotated_image = cv2.rotate(yuv_image, cv2.ROTATE_180)
+        gray = cv2.rotate(gray, cv2.ROTATE_180)
         #cropped_image = crop_top_30_percent(rotated_image)
 
         #cv2.write(rgb_image)
@@ -593,22 +591,24 @@ def predict_ops_stream(data):
         # filepath = os.path.join(os.getcwd(), filename)
         # cv2.imwrite(filepath, rotated_image)
 
-        rotated_image = np.array(rotated_image)
+        gray = np.array(gray)
         # Save the RGB image
         #gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         # gray = rotated_image
-        faces = face_cascade.detectMultiScale(rotated_image, scaleFactor=1.3, minNeighbors=5)
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
         #cv2.imwrite(filepath2, gray)
         # print(faces)
         selected = None
         eye1=None
         eye2=None
+        #print(faces)
         for (x, y, w, h) in faces:
-            face_roi = rotated_image[y:y+h, x:x+w]
+            face_roi = gray[y:y+h, x:x+w]
             eyes = eye_cascade.detectMultiScale(face_roi)
-            
+            #print(eyes, "w", w)
             for (ex, ey, ew, eh) in eyes:
                 if ex < w/2:  # Left eye
+                    #print("left eye")
                     eye_roi = face_roi[ey:ey+eh, ex:ex+ew]
                     eye_roi = cv2.resize(eye_roi, (100, 100), interpolation=cv2.INTER_LINEAR)
                     
@@ -616,13 +616,15 @@ def predict_ops_stream(data):
                     data = CustomParser(eye_roi)
                     data = np.asarray([np.asarray(data.reshape(image_shape))])
                     data = data / 255
-                    predictions = model.predict(data)
-                    max_value = np.amax(predictions[0])
+                    predictions = model.predict(data, verbose = 0)
+                    #print("left", predictions)
+                    # max_value = np.amax(predictions[0])
                     result = np.where(predictions[0] == np.amax(predictions[0]))[0]
                     eye1=result
                     # selected = result
 
                 else:  # Right eye
+                    #print("right-eye")
                     eye_roi = face_roi[ey:ey+eh, ex:ex+ew]
                     eye_roi = cv2.resize(eye_roi, (100, 100), interpolation=cv2.INTER_LINEAR)
                     
@@ -630,36 +632,41 @@ def predict_ops_stream(data):
                     data = CustomParser(eye_roi)
                     data = np.asarray([np.asarray(data.reshape(image_shape))])
                     data = data / 255
-                    predictions = model.predict(data)
-                    max_value = np.amax(predictions[0])
+                    predictions = model.predict(data, verbose = 0)
+                    #print("right", predictions)
+                    #max_value = np.amax(predictions[0])
                     result = np.where(predictions[0] == np.amax(predictions[0]))[0]
                     eye2=result
                     selected = result
                     # print(result)
 
+        # if eye1 != None:
+        #     weights[eye1]+=((i+1)/total_time)
+        # if eye2 != None: 
+        #     weights[eye2]+=((i+1)/total_time)
+        #print(eye1, eye2)
         if eye1!=eye2:
             selected=None
-    
-        if selected is not None and (prev is None or prev==selected[0]):
-            #print("first")
-            weights[selected[0]]+=((i+1)/total_time)
-            #change_border_colour(boxes[letters[selected[0]]],((i+1)/total_time))
-        elif selected is not None:
+        # if selected is not None and (prev is None or prev==selected[0]):
+        #     #print("first")
+        #     weights[selected[0]]+=((i+1)/total_time)
+        #     #change_border_colour(boxes[letters[selected[0]]],((i+1)/total_time))
+        if selected is not None:
             #print("second")
             #change_border_colour(boxes[letters[prev]],0)
             weights[selected[0]]+=((i+1)/total_time)
             #change_border_colour(boxes[letters[selected[0]]],((i+1)/total_time))
-        if selected is not None:
-            prev=selected[0]
-        else:
-            prev=None
+        # if selected is not None:
+        #     prev=selected[0]
+        # else:
+        #     prev=None
         
         i += 1 
+    print(weights)
     weights_list = weights.tolist()
     emit('predict_weights', {
         "weights": weights_list,
     })
-    """
 
 
 @socketio.on('predict_ops')

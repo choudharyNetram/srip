@@ -63,9 +63,26 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
       int maxIndex = weights.indexOf(maxValue);
       if (maxValue >= threshold) {
         if (maxIndex == 8) {
-          handleDeletePress(maxIndex);
-        } else {
+          handleDeletePress(maxIndex-1);
+        }
+        else if (maxIndex == 4){
+          if(view == 0){
+            setState(() {
+              text += " " ; 
+            });
+          }
+          else {
+            setState(() {
+            view = 0 ; 
+          });
+          }
+          
+        }
+         else if(maxIndex<4) {
           handleButtonPress(maxIndex);
+        }
+        else {
+          handleButtonPress(maxIndex-1) ; 
         }
       }
     }
@@ -74,7 +91,7 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
   Future<void> _initializeSocketAndCamera() async {
     await initializeCameras();
     if (_cameras.isNotEmpty) {
-      controller = CameraController(_cameras[1], ResolutionPreset.max);
+      controller = CameraController(_cameras[1], ResolutionPreset.medium);
       await controller.initialize();
       if (!mounted) return;
 
@@ -109,11 +126,11 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
   }
 
   List<Uint8List> frameBuffer = [];
-  final double threshold = 0.001;
-  final int bufferSize = 3;
+  final double threshold = 0.1;
+  final int bufferSize = 5;
   // Add this to your _CameraKeyboardScreenState class
   int _lastProcessedTimestamp = 0;
-  final int _imageProcessingInterval = 350; // Interval in milliseconds
+  final int _imageProcessingInterval = 400; // Interval in milliseconds
   
 
   void _processCameraImage(CameraImage image) async {
@@ -247,13 +264,12 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
                     ),
                   ),
                 ),
-                _buildWeightsDisplay(socketService.weights),
               ],
             )
           : Center(child: CircularProgressIndicator()),
     );
   }
-
+  /*
   Widget _buildWeightsDisplay(List<double> weights) {
     if (weights.isEmpty) {
       return Text('No weights received yet');
@@ -271,7 +287,7 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
         ),
       ],
     );
-  }
+  }*/
 
   Expanded buildButton(int index, Alignment alignment, {int flex = 1, bool isDeleteButton = false}) {
     return Expanded(
@@ -306,14 +322,14 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
   }
 
   final List<List<String>> keyBoardData = [
-    ["ABCD\nEFGH", "IJKL\nMNOP", "QRST\nUVWX", "YZab\ncdef", "ghij\nklmn", "opqr\nstuv", "wxyz\n., 0", "delete"],
+    ["ABCD\nEFGH", "IJKL\nMNOP", "QRST\nUVWX", "YZab\ncdef", "ghij\nklmn", "opqr\nstuv", "wxyz\n.,01", "delete"],
     ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
     ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'],
     ['Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'],
     ['Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f'],
     ['g', 'h', 'i', 'j', 'k', 'l', 'm', 'n'],
     ['o', 'p', 'q', 'r', 's', 't', 'u', 'v'],
-    ['w', 'x', 'y', 'z', '.', ',', '0', ''],
+    ['w', 'x', 'y', 'z', '.', ',', '0', '1'],
   ];
 }
 
