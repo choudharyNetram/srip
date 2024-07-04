@@ -478,14 +478,6 @@ def plot_multilabel_confusion_matrix(confusion_matrix):
     plt.show()
 
 
-global weights 
-
-import random
-
-@socketio.on('prediction_ops_start')
-def prediction_start():
-    global weights 
-    weights = np.zeros(9)
 
 
 # def yuv_to_rgb(yuv_bytes, width, height):
@@ -565,13 +557,27 @@ def predict_ops_stream(data):
 
 """
 
-@socketio.on('predict_ops_stream')
-def predict_ops_stream(data):
-    images = data['images']
-    images = images 
+weights = np.zeros(9)
+i = 0 
+
+@socketio.on('prediction_ops_start')
+def prediction_start():
+    global weights 
+    global i 
     weights = np.zeros(9)
     i = 0 
-    total_time=5
+    print('predict_ops_function_called')
+
+
+@socketio.on('predict_ops_stream')
+def predict_ops_stream(data):
+    global weights 
+    global i 
+    
+
+    images = data['images']
+    images = images 
+    total_time=8
     prev=None
    
 
@@ -608,7 +614,7 @@ def predict_ops_stream(data):
             #print(eyes, "w", w)
             for (ex, ey, ew, eh) in eyes:
                 if ex < w/2:  # Left eye
-                    #print("left eye")
+                    # print("left eye")
                     eye_roi = face_roi[ey:ey+eh, ex:ex+ew]
                     eye_roi = cv2.resize(eye_roi, (100, 100), interpolation=cv2.INTER_LINEAR)
                     
@@ -624,7 +630,7 @@ def predict_ops_stream(data):
                     # selected = result
 
                 else:  # Right eye
-                    #print("right-eye")
+                    # print("right-eye")
                     eye_roi = face_roi[ey:ey+eh, ex:ex+ew]
                     eye_roi = cv2.resize(eye_roi, (100, 100), interpolation=cv2.INTER_LINEAR)
                     
@@ -644,29 +650,38 @@ def predict_ops_stream(data):
         #     weights[eye1]+=((i+1)/total_time)
         # if eye2 != None: 
         #     weights[eye2]+=((i+1)/total_time)
-        #print(eye1, eye2)
+
+        # print(eye1, eye2)
+
         if eye1!=eye2:
             selected=None
-        # if selected is not None and (prev is None or prev==selected[0]):
+       
+        if selected is not None:
+            #change_border_colour(boxes[letters[prev]],0)
+            weights[selected[0]]+=((i+1)/total_time)
+
+        i += 1 
+            #change_border_colour(boxes[letters[selected[0]]],((i+1)/total_time))
+         # if selected is not None and (prev is None or prev==selected[0]):
         #     #print("first")
         #     weights[selected[0]]+=((i+1)/total_time)
         #     #change_border_colour(boxes[letters[selected[0]]],((i+1)/total_time))
-        if selected is not None:
-            #print("second")
-            #change_border_colour(boxes[letters[prev]],0)
-            weights[selected[0]]+=((i+1)/total_time)
-            #change_border_colour(boxes[letters[selected[0]]],((i+1)/total_time))
         # if selected is not None:
         #     prev=selected[0]
         # else:
         #     prev=None
         
-        i += 1 
-    print(weights)
+        
+
+   
     weights_list = weights.tolist()
     emit('predict_weights', {
         "weights": weights_list,
+        "iter": i , 
     })
+    if i == 8 :
+        i = 0 
+        weights = np.zeros(9) 
 
 
 @socketio.on('predict_ops')

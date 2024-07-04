@@ -58,40 +58,73 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
   void _onWeightsChanged() {
     final socketService = Provider.of<SocketService>(context, listen: false);
     List<double> weights = socketService.weights;
+    int iter = socketService.iter ; 
     if (weights.isNotEmpty) {
       double maxValue = weights.reduce(max);
       int maxIndex = weights.indexOf(maxValue);
-      if (maxValue >= threshold) {
-        if (maxIndex == 8) {
-          handleDeletePress(maxIndex-1);
-        }
-        else if (maxIndex == 4){
-          if(view == 0){
-            setState(() {
-              text += " " ; 
+      if(weights[maxIndex]==0){
+        maxIndex = 4 ; 
+      }
+      if(maxIndex <= 4){
+        setState(() {
+          buttonNo = maxIndex ; 
+          borderWidth += 1 ; 
+        });
+      }
+      else {
+        setState(() {
+          buttonNo = maxIndex-1 ; 
+          borderWidth += 1 ; 
+        });
+      }
+      
+     
+     if(iter == 8){
+
+        setState(() {
+          borderWidth = 0 ; 
+          buttonNo = 4 ; 
+        });
+        if ( maxValue >= threshold) {
+          if (maxIndex == 8) {
+            handleDeletePress(maxIndex-1);
+          }
+          else if (maxIndex == 4){
+            if(view == 0){
+              setState(() {
+                text += " " ; 
+              });
+            }
+            else {
+              setState(() {
+              view = 0 ; 
             });
+            }
+            
+          }
+          else if(maxIndex<4) {
+            handleButtonPress(maxIndex);
           }
           else {
-            setState(() {
-            view = 0 ; 
-          });
+            handleButtonPress(maxIndex-1) ; 
           }
-          
-        }
-         else if(maxIndex<4) {
-          handleButtonPress(maxIndex);
-        }
-        else {
-          handleButtonPress(maxIndex-1) ; 
-        }
+
       }
+     }
+      
     }
   }
 
   Future<void> _initializeSocketAndCamera() async {
     await initializeCameras();
     if (_cameras.isNotEmpty) {
-      controller = CameraController(_cameras[1], ResolutionPreset.medium);
+      if(_cameras.length > 1){
+        controller = CameraController(_cameras[1], ResolutionPreset.medium);
+      }
+      else {
+        controller = CameraController(_cameras[0], ResolutionPreset.medium);
+      }
+      
       await controller.initialize();
       if (!mounted) return;
 
@@ -126,12 +159,15 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
   }
 
   List<Uint8List> frameBuffer = [];
-  final double threshold = 0.1;
-  final int bufferSize = 5;
+  final double threshold = 1.3;
+  final int bufferSize = 2;
+
+
   // Add this to your _CameraKeyboardScreenState class
   int _lastProcessedTimestamp = 0;
-  final int _imageProcessingInterval = 400; // Interval in milliseconds
-  
+  final int _imageProcessingInterval = 500; // Interval in milliseconds
+  double borderWidth = 0 ; 
+  int buttonNo = 4 ; 
 
   void _processCameraImage(CameraImage image) async {
     int currentTimestamp = DateTime.now().millisecondsSinceEpoch;
@@ -145,7 +181,7 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
     yuvBytes = yuvBytes.sublist(0, halfSize); 
     // Add the sliced bytes to the frameBuffer
 
-    frameBuffer.add(yuvBytes);
+      frameBuffer.add(yuvBytes);
     // print('Image Height: ${image.height}');
     // print('Image Width: ${image.width}');
     // print('Image Format: ${image.format.group}');
@@ -204,10 +240,11 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
       });
     }
   }
+  
+  
 
   @override
   Widget build(BuildContext context) {
-    final socketService = Provider.of<SocketService>(context);
     return Scaffold(
       body: isCameraInitialized
           ? Column(
@@ -269,26 +306,7 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
           : Center(child: CircularProgressIndicator()),
     );
   }
-  /*
-  Widget _buildWeightsDisplay(List<double> weights) {
-    if (weights.isEmpty) {
-      return Text('No weights received yet');
-    }
-
-    return Column(
-      children: [
-        Text(
-          'Received Weights:',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          weights.toString(),
-          style: TextStyle(fontSize: 16),
-        ),
-      ],
-    );
-  }*/
-
+  
   Expanded buildButton(int index, Alignment alignment, {int flex = 1, bool isDeleteButton = false}) {
     return Expanded(
       flex: flex,
@@ -296,8 +314,10 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
         alignment: alignment,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(255, 149, 243, 33),
-            foregroundColor: const Color.fromARGB(255, 54, 89, 244),
+            backgroundColor: const Color.fromARGB(215,0,0,0),
+            foregroundColor: const Color.fromARGB(255, 255, 255, 255),
+            side: index == buttonNo ? BorderSide(width: borderWidth, color: Color.fromRGBO(83, 175, 76, 1)) : null, 
+
             fixedSize: const Size(60, 48),
             padding: EdgeInsets.zero,
             shape: RoundedRectangleBorder(

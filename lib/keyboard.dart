@@ -125,8 +125,8 @@ class KeyboardState extends State<KeyboardNew1> {
         alignment: alignment,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(255, 149, 243, 33),
-            foregroundColor: const Color.fromARGB(255, 54, 89, 244),
+            backgroundColor: const Color.fromARGB(255,20,30,10),
+            foregroundColor: Color.fromARGB(255, 255, 255, 255),
             fixedSize: const Size(60, 48),
             padding: EdgeInsets.zero, // Remove default padding
             shape: RoundedRectangleBorder(

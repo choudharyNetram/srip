@@ -5,6 +5,7 @@ class SocketService with ChangeNotifier {
   late io.Socket socket;
   String serverResponse = 'No Response';
   List<double>weights = []; 
+  int iter = 0 ; 
 
   SocketService() {
     connectToServer();
@@ -38,6 +39,7 @@ class SocketService with ChangeNotifier {
     socket.on('predict_weights', (data) {
       serverResponse = data.toString();
       weights = List<double>.from(data['weights']);
+      iter = data['iter']  ; 
       //print('Weights: $weights'); // Print the weights to the console
       notifyListeners();
     });
