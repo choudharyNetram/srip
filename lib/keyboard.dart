@@ -63,6 +63,7 @@ class KeyboardState extends State<KeyboardNew1> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           children: [
@@ -117,7 +118,7 @@ class KeyboardState extends State<KeyboardNew1> {
       ),
     );
   }
-
+  int buttonNo = 4 ; 
   Expanded buildButton(int index, Alignment alignment, {int flex = 1, bool isDeleteButton = false}) {
     return Expanded(
       flex: flex,
@@ -125,8 +126,9 @@ class KeyboardState extends State<KeyboardNew1> {
         alignment: alignment,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(255,20,30,10),
-            foregroundColor: Color.fromARGB(255, 255, 255, 255),
+           backgroundColor: const Color.fromARGB(215,0,0,0),
+            foregroundColor: const Color.fromARGB(255, 255, 255, 255),
+            side: index == buttonNo ? BorderSide(width: 4, color: Color.fromRGBO(83, 175, 76, 1)) : BorderSide(width: 4, color:Color.fromARGB(255, 255, 255, 255)) ,
             fixedSize: const Size(60, 48),
             padding: EdgeInsets.zero, // Remove default padding
             shape: RoundedRectangleBorder(

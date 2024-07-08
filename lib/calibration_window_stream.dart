@@ -221,7 +221,7 @@ class _CalibrationWindowState extends State<CalibrationWindowStream> with Single
   }
 
   void _autoChangeCoordinates() {
-     Timer.periodic(Duration(seconds: 8), (timer) {
+     Timer.periodic(Duration(seconds: 20), (timer) {
       if (!mounted) {
         timer.cancel();
         return;

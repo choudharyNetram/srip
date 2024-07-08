@@ -126,6 +126,18 @@ target/
 profile_default/
 ipython_config.py
 
+ModelInfo.py 
+matplot2.py
+matplotTest.py
+model_architecture.dot 
+model_architecture.png 
+training_history.json 
+
+http_files/
+
+wasteFiles/
+
+Server_files/
 # pyenv
 
 android/sdk/

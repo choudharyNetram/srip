@@ -163,7 +163,7 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
   }
 
   void _autoChangeCoordinates() {
-     Timer.periodic(Duration(seconds: 5), (timer) {
+     Timer.periodic(Duration(seconds: 55), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -210,8 +210,8 @@ class _CalibrationWindowState extends State<CalibrationWindow> with SingleTicker
       if (imageFile != null) {
         Uint8List imageData = await imageFile.readAsBytes();
         // Uint8List compressedImageData = _compressImage(imageData);
-        frameBuffer.add(imageData);
-        buttonNumbers.add(3 * xAxis + yAxis ); 
+        //frameBuffer.add(imageData);
+        // buttonNumbers.add(3 * xAxis + yAxis ); 
         if (frameBuffer.length >= bufferSize) {
           _sendFramesToServer(frameBuffer,buttonNumbers );
           frameBuffer.clear();
