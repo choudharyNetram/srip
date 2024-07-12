@@ -1,34 +1,50 @@
-## Tech Stack and Libraries Used
+# Real-Time Assistive Typing Mobile Application with CNN and OpenCV-Enhanced Server
 
-### Server (Python)
+This project implements a real-time typing application using Flutter for the frontend and a Python backend powered by Flask and various libraries. It leverages CNNs (Convolutional Neural Networks) for prediction and OpenCV for image processing, enabling an efficient and accurate user experience.
 
-- **Flask**: Lightweight WSGI web application framework.
-pip install Flask
+**Key Features:**
 
-pip install Flask-SocketIO
+* Real-time typing with high prediction accuracy
+* User-friendly virtual keyboard interface
+* Calibration window for personalized model fine-tuning
+* Efficient communication between frontend and backend using SocketIO
 
-pip install opencv-python
+**Tech Stack:**
 
-pip install numpy
+* **Frontend (Flutter):**
+    * Cross-platform development for consistent user experience across devices
+    * Virtual keyboard for real-time interaction
+    * Calibration Window for Fine-tuning of model
+    * Communication with backend server through SocketIO
+* **Backend (Python):**
+    * Flask for lightweight and efficient web framework
+    * OpenCV for image processing tasks like face and eye detection
+    * NumPy for numerical computations
+    * TensorFlow for machine learning model implementation (CNN)
+    * Pillow for image manipulation
+    * Scikit-learn for machine learning utilities 
+    * Keras for deep learning 
+    * Eventlet for asynchronous task handling 
 
-pip install tensorflow
+**Installation:**
 
-pip install Pillow
+**1. Python Backend:**
 
-pip install matplotlib
+## Installation (Python Backend)
 
-pip install pandas
+You'll need the following Python libraries for the backend server:
 
-pip install scikit-learn
+```bash
+pip install Flask Flask-SocketIO opencv-python numpy tensorflow Pillow matplotlib pandas scikit-learn keras eventlet
+```
 
-pip install keras
+**2. Flutter Frontend:**
 
-pip install eventlet
+Add the following dependencies to your `pubspec.yaml` file:
 
-### Frontend (Flutter)
-Add the following dependencies to your pubspec.yaml file:
+```yaml
 dependencies:
-  camera: ^0.11.0
+  camera: ^0.11.0+2
   flutter:
     sdk: flutter
   provider: ^6.0.0
@@ -36,10 +52,8 @@ dependencies:
   image_picker: ^1.1.1
   image: ^4.2.0
   socket_io_client: ^2.0.3+1
-
+```
+Then Run: 
 flutter pub get
-
-
-
 
 
