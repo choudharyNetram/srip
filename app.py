@@ -648,10 +648,10 @@ def predict_ops_stream(data):
         for (x, y, w, h) in faces:
             face_roi = gray[y:y+h, x:x+w]
             eyes = eye_cascade.detectMultiScale(face_roi)
-            print(eyes)
+            #print(eyes)
             for (ex, ey, ew, eh) in eyes:
                 if ex < w/2-50:  # Left eye
-                    print("left-eye")
+                    #print("left-eye")
                     eye_roi = face_roi[ey:ey+eh, ex:ex+ew]
                     eye_roi = cv2.resize(eye_roi, (100, 100), interpolation=cv2.INTER_LINEAR)
                     
@@ -667,7 +667,7 @@ def predict_ops_stream(data):
                     # selected = result
 
                 else:  # Right eye
-                    print("right-eye")
+                    #print("right-eye")
                     eye_roi = face_roi[ey:ey+eh, ex:ex+ew]
                     eye_roi = cv2.resize(eye_roi, (100, 100), interpolation=cv2.INTER_LINEAR)
                     
@@ -689,7 +689,7 @@ def predict_ops_stream(data):
             weights[eye2]+=((i+1)/total_time)
 
         # print(eye1, eye2)
-        print(weights)
+        #print(weights)
         # if eye1!=eye2:
         #     selected=None
        

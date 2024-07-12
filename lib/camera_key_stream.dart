@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/services.dart';
-import 'socket_service.dart';
+import 'socket_service.dart'; 
 import 'dart:math' ; 
 
 late List<CameraDescription> _cameras;
@@ -80,7 +80,6 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
       
      
      if(iter == 8){
-
         setState(() {
           borderWidth = 0 ; 
           buttonNo = 4 ; 
@@ -159,7 +158,7 @@ class _CameraKeyboardScreenState extends State<CameraKeyboardScreen> {
   }
 
   List<Uint8List> frameBuffer = [];
-  final double threshold = 1.3;
+  final double threshold = 3.0;
   final int bufferSize = 2;
 
 
