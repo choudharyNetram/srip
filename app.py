@@ -429,8 +429,8 @@ def train(data):
 
     # Save the final model in .h5 format
     model.save('calibrated-user-models/final_model.h5')
-    with open('training_history.json', 'w') as file:
-        json.dump(history.history, file)
+    # with open('training_history.json', 'w') as file:
+    #     json.dump(history.history, file)
 
     """ 
     save_best_model = SaveBestModel()
